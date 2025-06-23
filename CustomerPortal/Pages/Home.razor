@@ -1,0 +1,76 @@
+﻿@page "/home"
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject ProtectedSessionStorage SessionStorage
+@inject NavigationManager NavManager
+@using CustomerPortal.Data
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Cards
+@using Syncfusion.Blazor.Notifications
+
+<div class="flex flex-col items-center justify-center min-h-[80vh] px-4">
+    @if (user is not null)
+    {
+        <SfCard CssClass="shadow-lg rounded-2xl w-full max-w-xl bg-white">
+            <CardHeader>
+                <div class="flex items-center gap-4">
+                    <SfAvatar CssClass="e-avatar e-avatar-circle bg-primary text-white text-xl" Content="@user.name[0]" />
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-800">@Greeting, @user.name!</h2>
+                        <p class="text-sm text-gray-500">Welcome back to the Customer Portal.</p>
+                    </div>
+                </div>
+            </CardHeader>
+
+            <CardContent>
+                <div class="space-y-3 mt-4">
+                    <div class="flex items-center gap-2 text-gray-700">
+                        <span><strong>User ID:</strong> @user.customerId</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-gray-700">
+                        <span class="e-icons e-mail"></span>
+                        <span><strong>Email:</strong> @user.email</span>
+                    </div>
+                </div>
+            </CardContent>
+        </SfCard>
+    }
+    else
+    {
+        <SfCard CssClass="w-full max-w-md bg-white shadow-md p-4 rounded-xl text-center">
+            <p class="text-gray-600 text-lg">Loading your details...</p>
+        </SfCard>
+    }
+</div>
+
+@code {
+    private Customer? user;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var result = await SessionStorage.GetAsync<Customer>("userData");
+            if (result.Success)
+            {
+                user = result.Value;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private string Greeting
+    {
+        get
+        {
+            var hour = DateTime.Now.Hour;
+            return hour switch
+            {
+                >= 5 and < 12 => "Good Morning",
+                >= 12 and < 17 => "Good Afternoon",
+                >= 17 and < 21 => "Good Evening",
+                _ => "Good Night"
+            };
+        }
+    }
+
+}

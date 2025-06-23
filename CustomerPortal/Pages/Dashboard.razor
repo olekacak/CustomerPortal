@@ -1,0 +1,209 @@
+﻿@page "/dashboard"
+@inject HttpClient Http
+
+@using Syncfusion.Blazor.Navigations
+@using Syncfusion.Blazor.DropDowns
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Spinner
+@using System.Text.Json
+@using CustomerPortal.Data
+
+<h3 class="text-2xl font-semibold mb-6 text-gray-800">📊 Customer Dashboard</h3>
+
+<div class="bg-white p-6 rounded-2xl shadow-md">
+    <SfTab CssClass="e-fill">
+        <TabItems>
+            <TabItem Header="@tab1Header">
+                <ContentTemplate>
+                    <div class="space-y-4">
+
+                        <!-- Dropdown -->
+                        <div class="w-full md:w-1/2">
+                            <SfDropDownList TValue="int" TItem="DropDownOption"
+                                            DataSource="@options"
+                                            Placeholder="Select Option"
+                                            Value="@selectedOption"
+                                            ValueChanged="@OnDropDownChanged"
+                                            FloatLabelType="FloatLabelType.Always"
+                                            CssClass="e-outline">
+                                <DropDownListFieldSettings Text="Text" Value="Value" />
+                            </SfDropDownList>
+                        </div>
+
+                        <!-- Search Box -->
+                        @if (selectedOption == 2 || selectedOption == 3)
+                        {
+                            <div class="flex flex-col md:flex-row items-center gap-3">
+                                <SfTextBox Placeholder="Enter search..." @bind-value="search"
+                                           FloatLabelType="FloatLabelType.Always"
+                                           CssClass="e-outline e-input-icon-right">
+                                    <TextBoxAddOn>
+                                        <TextBoxPrefix>
+                                            <span class="e-icons e-search"></span>
+                                        </TextBoxPrefix>
+                                    </TextBoxAddOn>
+                                </SfTextBox>
+
+                                <SfButton CssClass="e-primary" @onclick="LoadCustomers">🔍 Search</SfButton>
+                            </div>
+                        }
+
+                        <!-- Alerts -->
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="text-red-600 bg-red-100 p-3 rounded-md shadow-inner">
+                                ❌ @errorMessage
+                            </div>
+                        }
+
+                        <!-- Spinner and Results -->
+                        @if (isSearchTriggered)
+                        {
+                            @if (isLoading)
+                            {
+                                <div class="flex justify-center mt-6">
+                                    <SfSpinner Visible="true" />
+                                </div>
+                            }
+                            else if (customers != null && customers.Any())
+                            {
+                                <div class="overflow-x-auto mt-4">
+                                    <SfGrid DataSource="@customers" AllowPaging="true" PageSettings="new() { PageSize = 10 }" CssClass="e-grid-hover">
+                                        <GridColumns>
+                                            <GridColumn Field="customerId" HeaderText="ID" Width="80" TextAlign="TextAlign.Center" />
+                                            <GridColumn Field="name" HeaderText="Name" Width="150" />
+                                            <GridColumn Field="email" HeaderText="Email" Width="200" />
+                                            <GridColumn Field="phone" HeaderText="Phone" Width="130" />
+                                            <GridColumn Field="address" HeaderText="Address" Width="200" />
+                                            <GridColumn Field="city" HeaderText="City" Width="120" />
+                                            <GridColumn Field="state" HeaderText="State" Width="120" />
+                                            <GridColumn Field="country" HeaderText="Country" Width="120" />
+                                            <GridColumn Field="dob" HeaderText="Date of Birth" Type="ColumnType.Date" Format="dd/MM/yyyy" Width="140" TextAlign="TextAlign.Center" />
+                                            <GridColumn Field="gender" HeaderText="Gender" Width="100" TextAlign="TextAlign.Center" />
+                                            <GridColumn Field="occupation" HeaderText="Occupation" Width="150" />
+                                            <GridColumn Field="role" HeaderText="Role" Width="100" TextAlign="TextAlign.Center" />
+                                        </GridColumns>
+                                    </SfGrid>
+
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-blue-600 bg-blue-100 p-3 rounded-md shadow-inner mt-3">
+                                    ℹ️ No customers found. Try different criteria.
+                                </div>
+                            }
+                        }
+                    </div>
+                </ContentTemplate>
+            </TabItem>
+
+            <TabItem Header="@tab2Header">
+                <ContentTemplate>
+                    <Dashboard2 />
+                </ContentTemplate>
+            </TabItem>
+        </TabItems>
+    </SfTab>
+</div>
+
+@code {
+    private TabHeader tab1Header = new() { Text = "🔎 Search Customers" };
+    private TabHeader tab2Header = new() { Text = "📈 Analytics" };
+
+    private int selectedOption = 1;
+    private string? search;
+    private List<Customer>? customers;
+    private string? errorMessage;
+    private bool isSearchTriggered = false;
+    private bool isLoading = false;
+
+    private List<DropDownOption> options = new()
+    {
+        new DropDownOption { Value = 1, Text = "All Customers" },
+        new DropDownOption { Value = 2, Text = "By State" },
+        new DropDownOption { Value = 3, Text = "By Country" }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomers();
+    }
+
+    private async Task LoadCustomers()
+    {
+        try
+        {
+            customers = null;
+            errorMessage = null;
+            isLoading = true;
+
+            string url;
+
+            if (selectedOption != 1)
+            {
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    url = $"https://localhost:7026/api/customer/getCustomer?option={selectedOption}&search={Uri.EscapeDataString(search)}";
+                }
+                else
+                {
+                    errorMessage = "Please enter search criteria and click Search.";
+                    isLoading = false;
+                    return;
+                }
+            }
+            else
+            {
+                url = $"https://localhost:7026/api/customer/getCustomer?option={selectedOption}";
+            }
+
+            isSearchTriggered = true;
+
+            var json = await Http.GetStringAsync(url);
+            var result = JsonSerializer.Deserialize<ApiCustomerResponse>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            customers = result?.Customers;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"API call failed: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OnDropDownChanged(int value)
+    {
+        selectedOption = value;
+        search = null;
+        customers = null;
+        errorMessage = null;
+        isSearchTriggered = false;
+
+        if (selectedOption == 1)
+        {
+            await LoadCustomers();
+        }
+
+        StateHasChanged();
+    }
+
+    private class DropDownOption
+    {
+        public int Value { get; set; }
+        public string Text { get; set; } = string.Empty;
+    }
+
+    private class ApiCustomerResponse
+    {
+        public List<Customer>? Customers { get; set; }
+    }
+}

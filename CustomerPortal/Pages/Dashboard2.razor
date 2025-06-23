@@ -1,0 +1,128 @@
+﻿@page "/dashboard-tab2"
+@inject HttpClient Http
+
+@using Syncfusion.Blazor.Cards
+@using Syncfusion.Blazor.Charts
+@using System.Text.Json
+@using CustomerPortal.Data
+
+<h3 class="mb-4">Customer Dashboard</h3>
+
+@if (isLoading)
+{
+    <p>Loading data...</p>
+}
+else
+{
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+        <SfCard CssClass="e-card e-card-highlight">
+            <div class="e-card-header">
+                <div class="e-card-header-caption">
+                    <div class="e-card-title text-xl font-semibold text-center">Total Customers</div>
+                </div>
+            </div>
+            <div class="e-card-content text-center text-2xl font-bold text-primary">
+                @totalCustomers
+            </div>
+        </SfCard>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <SfChart Title="Customers by Age Group">
+            <ChartPrimaryXAxis ValueType="Syncfusion.Blazor.Charts.ValueType.Category" Title="Age Group" />
+            <ChartPrimaryYAxis Title="Count" />
+            <ChartSeriesCollection>
+                <ChartSeries DataSource="@customersByAge"
+                             XName="Label" YName="Value"
+                             Type="ChartSeriesType.Column">
+                </ChartSeries>
+            </ChartSeriesCollection>
+        </SfChart>
+
+        <SfChart Title="Customers by State">
+            <ChartPrimaryXAxis ValueType="Syncfusion.Blazor.Charts.ValueType.Category" Title="State" />
+            <ChartPrimaryYAxis Title="Count" />
+            <ChartSeriesCollection>
+                <ChartSeries DataSource="@customersByState"
+                             XName="Label" YName="Value"
+                             Type="ChartSeriesType.Bar">
+                </ChartSeries>
+            </ChartSeriesCollection>
+        </SfChart>
+
+        <SfAccumulationChart Title="Customers by Country">
+            <AccumulationChartSeriesCollection>
+                <AccumulationChartSeries DataSource="@customersByCountry"
+                                         XName="Label" YName="Value"
+                                         InnerRadius="40%">
+                </AccumulationChartSeries>
+            </AccumulationChartSeriesCollection>
+        </SfAccumulationChart>
+    </div>
+}
+
+@code {
+    private int totalCustomers;
+    private bool isLoading = true;
+
+    private List<ChartData> customersByAge = new();
+    private List<ChartData> customersByState = new();
+    private List<ChartData> customersByCountry = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        try
+        {
+            var response = await Http.GetAsync("https://localhost:7026/api/customer/getCustomerData");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                totalCustomers = root.GetProperty("return_set_01").GetInt32();
+
+                customersByAge = root.GetProperty("byAge")
+    .EnumerateArray()
+    .Select(x => new ChartData
+        {
+            Label = x.GetProperty("ageGroup").GetString(), // lowercase 'a'
+            Value = x.GetProperty("count").GetInt32()
+        }).ToList();
+
+                customersByState = root.GetProperty("byState")
+                    .EnumerateArray()
+                    .Select(x => new ChartData
+                        {
+                            Label = x.GetProperty("state").GetString(), // lowercase 's'
+                            Value = x.GetProperty("count").GetInt32()
+                        }).ToList();
+
+                customersByCountry = root.GetProperty("byCountry")
+                    .EnumerateArray()
+                    .Select(x => new ChartData
+                        {
+                            Label = x.GetProperty("country").GetString(), // lowercase 'c'
+                            Value = x.GetProperty("count").GetInt32()
+                        }).ToList();
+
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine("Error loading dashboard data: " + ex.Message);
+        }
+        isLoading = false;
+    }
+
+    public class ChartData
+    {
+        public string Label { get; set; }
+        public int Value { get; set; }
+    }
+}

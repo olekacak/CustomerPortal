@@ -1,0 +1,125 @@
+﻿@page "/register"
+@layout AuthLayout
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@using CustomerPortal.Data
+
+<div class="card shadow-lg border-0 rounded-4" style="width: 600px; padding: 40px;">
+    <div class="text-center mb-4">
+        <img src="https://ui-avatars.com/api/?name=Customer+Portal&background=0D8ABC&color=fff&size=128"
+             alt="Customer Portal Logo"
+             class="mb-2 rounded-circle shadow-sm"
+             width="80" />
+        <h4 class="fw-semibold">Create Your Account</h4>
+        <p class="text-muted small">Register to access your customer portal</p>
+    </div>
+
+    <EditForm Model="@registerData" OnValidSubmit="HandleRegister">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Full Name</label>
+                <InputText class="form-control form-control-sm" @bind-Value="registerData.name" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Email</label>
+                <InputText class="form-control form-control-sm" @bind-Value="registerData.email" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Phone</label>
+                <InputText class="form-control form-control-sm" @bind-Value="registerData.phone" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Password</label>
+                <InputText class="form-control form-control-sm" type="password" @bind-Value="registerData.password" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Confirm Password</label>
+                <InputText class="form-control form-control-sm" type="password" @bind-Value="confirmPassword" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Date of Birth</label>
+                <InputDate class="form-control form-control-sm" @bind-Value="registerData.dob" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Gender</label>
+                <InputSelect class="form-control form-control-sm" @bind-Value="registerData.gender">
+                    <option value="">-- Select --</option>
+                    <option>Male</option>
+                    <option>Female</option>
+                    <option>Other</option>
+                </InputSelect>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Occupation</label>
+                <InputText class="form-control form-control-sm" @bind-Value="registerData.occupation" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Address</label>
+                <InputText class="form-control form-control-sm" @bind-Value="registerData.address" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">City</label>
+                <InputText class="form-control form-control-sm" @bind-Value="registerData.city" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">State</label>
+                <InputText class="form-control form-control-sm" @bind-Value="registerData.state" />
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Country</label>
+                <InputText class="form-control form-control-sm" @bind-Value="registerData.country" />
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-success w-100 btn-lg mt-3">Register</button>
+
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <div class="alert alert-info mt-3">@message</div>
+        }
+
+        <div class="text-center mt-3">
+            <small class="text-muted">Already have an account? <a href="/login">Sign in</a></small>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private Customer registerData = new();
+    private string? confirmPassword;
+    private string? message;
+
+    private async Task HandleRegister()
+    {
+        message = null;
+
+        if (registerData.password != confirmPassword)
+        {
+            message = "Passwords do not match.";
+            return;
+        }
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("https://localhost:7026/api/customer/register", registerData);
+
+            if (response.IsSuccessStatusCode)
+            {
+                message = " Registration successful! Redirecting...";
+                await Task.Delay(2000);
+                Navigation.NavigateTo("/login", true);
+            }
+            else
+            {
+                message = " Registration failed. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Error: {ex.Message}";
+        }
+    }
+}

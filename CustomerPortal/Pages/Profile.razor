@@ -1,0 +1,330 @@
+﻿@page "/profile"
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject ProtectedSessionStorage SessionStorage
+@inject NavigationManager Navigation
+@using CustomerPortal.Data
+@inject HttpClient Http
+@using System.Text.Json
+@inject IJSRuntime JS
+
+
+<div class="container py-4">
+    <h2 class="mb-4 border-bottom pb-2">👤 My Profile</h2>
+
+    @if (user is not null)
+    {
+        <div class="card shadow rounded-4 p-4 bg-light-subtle">
+            <div class="row g-4">
+
+                <div class="col-md-6">
+                    <strong>Customer ID:</strong>
+                    <div>@user.customerId</div>
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Name:</strong>
+                    @if (isEditMode)
+                    {
+                        <InputText class="form-control" @bind-Value="userEdit.name" />
+                    }
+                    else
+                    {
+                        <div>@user.name</div>
+                    }
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Email:</strong>
+                    @if (isEditMode)
+                    {
+                        <InputText class="form-control" @bind-Value="userEdit.email" />
+                    }
+                    else
+                    {
+                        <div>@user.email</div>
+                    }
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Phone:</strong>
+                    @if (isEditMode)
+                    {
+                        <InputText class="form-control" @bind-Value="userEdit.phone" />
+                    }
+                    else
+                    {
+                        <div>@user.phone</div>
+                    }
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Address:</strong>
+                    @if (isEditMode)
+                    {
+                        <InputText class="form-control" @bind-Value="userEdit.address" />
+                    }
+                    else
+                    {
+                        <div>@user.address</div>
+                    }
+                </div>
+
+                <div class="col-md-6">
+                    <strong>City:</strong>
+                    @if (isEditMode)
+                    {
+                        <InputText class="form-control" @bind-Value="userEdit.city" />
+                    }
+                    else
+                    {
+                        <div>@user.city</div>
+                    }
+                </div>
+
+                <div class="col-md-6">
+                    <strong>State:</strong>
+                    @if (isEditMode)
+                    {
+                        <InputText class="form-control" @bind-Value="userEdit.state" />
+                    }
+                    else
+                    {
+                        <div>@user.state</div>
+                    }
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Country:</strong>
+                    @if (isEditMode)
+                    {
+                        <InputText class="form-control" @bind-Value="userEdit.country" />
+                    }
+                    else
+                    {
+                        <div>@user.country</div>
+                    }
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Date of Birth:</strong>
+                    @if (isEditMode)
+                    {
+                        <InputDate class="form-control" @bind-Value="userEdit.dob" />
+                    }
+                    else
+                    {
+                        <div>@user.dob?.ToString("dd MMM yyyy")</div>
+                    }
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Gender:</strong>
+                    @if (isEditMode)
+                    {
+                        <InputText class="form-control" @bind-Value="userEdit.gender" />
+                    }
+                    else
+                    {
+                        <div>@user.gender</div>
+                    }
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Occupation:</strong>
+                    @if (isEditMode)
+                    {
+                        <InputText class="form-control" @bind-Value="userEdit.occupation" />
+                    }
+                    else
+                    {
+                        <div>@user.occupation</div>
+                    }
+                </div>
+
+            </div>
+
+            <div class="d-flex gap-2 justify-content-end mt-4">
+                @if (!isEditMode)
+                {
+                    <button class="btn btn-primary px-4" @onclick="BeginEdit">
+                        ✏️ Edit Profile
+                    </button>
+                    <button class="btn btn-danger px-4" @onclick="DeleteAccount">
+                        🗑️ Delete Account
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-success px-4" @onclick="SaveProfile">
+                        💾 Save
+                    </button>
+                    <button class="btn btn-secondary px-4" @onclick="CancelEdit">
+                        ❌ Cancel
+                    </button>
+                }
+            </div>
+
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info mt-4">
+            Loading profile information...
+        </div>
+    }
+</div>
+
+@code {
+    private Customer? user;
+    private Customer? userEdit;     
+    private bool isEditMode = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var result = await SessionStorage.GetAsync<Customer>("userData");
+            if (result.Success)
+            {
+                user = result.Value;
+                StateHasChanged();
+            }
+            else
+            {
+                Navigation.NavigateTo("/login", true);
+            }
+        }
+    }
+
+
+    private async void EditProfile()
+    {
+        if (user != null)
+        {
+            try
+            {
+                var response = await Http.PostAsJsonAsync("https://localhost:7026/api/customer/register-or-edit", user);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+                    Console.WriteLine("✅ Profile updated! ID: " + result.GetProperty("customerId").GetInt32());
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine("❌ Update failed: " + error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("❌ Exception during update: " + ex.Message);
+            }
+        }
+        else
+        {
+            throw new BadHttpRequestException("Error edit profile");
+        }
+
+    }
+
+    private async Task DeleteAccount()
+    {
+        if (user is null) return;
+
+        // Correct usage of the injected IJSRuntime alias 'JS'
+        var confirm = await JS.InvokeAsync<bool>("confirm", new object[] { "Are you sure you want to delete your account?" });
+        if (!confirm) return;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("https://localhost:7026/api/customer/deleteAccount", user);
+
+            if (response.IsSuccessStatusCode)
+            {
+                await SessionStorage.DeleteAsync("userData");
+                Navigation.NavigateTo("/login", true);
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Console.WriteLine("❌ Deletion failed: " + error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("❌ Exception during delete: " + ex.Message);
+        }
+    }
+
+    private void BeginEdit()
+    {
+        if (user != null)
+        {
+            userEdit = new Customer
+                {
+                    customerId = user.customerId,
+                    name = user.name,
+                    email = user.email,
+                    phone = user.phone,
+                    address = user.address,
+                    city = user.city,
+                    state = user.state,
+                    country = user.country,
+                    dob = user.dob,
+                    gender = user.gender,
+                    occupation = user.occupation,                        
+                    password = user.password, // Include these two!
+                    role = user.role
+                };
+
+            isEditMode = true;
+        }
+    }
+
+    private async Task SaveProfile()
+    {
+        if (userEdit is null) return;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("https://localhost:7026/api/customer/register", userEdit);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Update main user state from edited version
+                user = userEdit;
+                await SessionStorage.SetAsync("userData", user);
+
+                isEditMode = false;
+                userEdit = null; // Optional: Clear temporary edit model
+                StateHasChanged(); // Refresh the UI
+
+                Console.WriteLine("✅ Profile updated successfully.");
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Console.WriteLine("❌ Update failed: " + error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("❌ Exception during update: " + ex.Message);
+        }
+    }
+
+
+    private async void CancelEdit()
+    {
+        var result = await SessionStorage.GetAsync<Customer>("userData");
+        if (result.Success)
+        {
+            user = result.Value;
+        }
+        isEditMode = false;
+        StateHasChanged(); // Force UI to refresh with reset data
+    }
+
+
+}

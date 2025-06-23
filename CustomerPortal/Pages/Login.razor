@@ -1,0 +1,113 @@
+﻿@page "/login"
+@layout AuthLayout
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject ProtectedSessionStorage SessionStorage
+@using System.Text.Json
+@using CustomerPortal.Data
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Notifications
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Inputs
+
+<div class="card shadow-lg border-0 rounded-4" style="width: 420px; padding: 40px;">
+    <div class="text-center mb-4">
+        <img src="https://ui-avatars.com/api/?name=Customer+Portal&background=0D8ABC&color=fff&size=128"
+             alt="Customer Portal Logo"
+             class="mb-2 rounded-circle shadow-sm"
+             width="80" />
+        <h4 class="fw-semibold">Welcome to Customer Portal</h4>
+        <p class="text-muted small">Please sign in to continue</p>
+    </div>
+
+    <EditForm Model="@loginData" OnValidSubmit="HandleLogin">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            @* <label class="form-label">Email</label> *@
+            <SfTextBox Placeholder="Enter your email" FloatLabelType="FloatLabelType.Auto" CssClass="e-outline"
+                       @bind-Value="loginData.email" />
+        </div>
+
+        <div class="mb-3">
+            @* <label class="form-label">Password</label> *@
+            <SfTextBox Placeholder="Enter your password" Type="InputType.Password" FloatLabelType="FloatLabelType.Auto" CssClass="e-outline" @bind-Value="loginData.password" />
+        </div>
+
+        <SfButton CssClass="e-primary w-100 e-btn-lg"
+                  IsPrimary="true"
+                  Content="Sign In"
+                  HtmlAttributes="submitButtonAttributes">
+        </SfButton>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger mt-3" role="alert">
+                @errorMessage
+            </div>
+        }
+
+        <div class="text-center mt-3">
+            <small class="text-muted">Don't have an account? <a href="/register">Register</a></small>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private LoginModel loginData = new();
+    private string? errorMessage;
+
+    private Dictionary<string, object> submitButtonAttributes = new()
+    {
+        { "type", "submit" }
+    };
+
+    public class LoginModel
+    {
+        public string email { get; set; } = string.Empty;
+        public string password { get; set; } = string.Empty;
+    }
+
+    private async Task HandleLogin()
+    {
+        errorMessage = null;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("https://localhost:7026/api/customer/login", loginData);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+                var userDataJson = json.GetProperty("userData").GetRawText();
+                var user = JsonSerializer.Deserialize<Customer>(userDataJson);
+
+                if (user is not null)
+                {
+                    await SessionStorage.SetAsync("userData", user);
+                    Navigation.NavigateTo("/home", true);
+                }
+                else
+                {
+                    errorMessage = "Failed to parse user data.";
+                }
+            }
+            else
+            {
+                // Get exact message from backend (plain text)
+                var responseText = await response.Content.ReadAsStringAsync();
+                errorMessage = string.IsNullOrWhiteSpace(responseText)
+                    ? "Login failed. Please try again."
+                    : responseText;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Login failed: " + ex.Message;
+        }
+    }
+
+}
