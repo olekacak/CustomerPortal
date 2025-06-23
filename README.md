@@ -27,18 +27,20 @@ A Blazor Server application built with .NET and Syncfusion UI components, using 
 
 ## Getting Started
 
+
 ### Prerequisites
 
 - [.NET 7 SDK](https://dotnet.microsoft.com/download)
 - [MySQL Server](https://www.mysql.com/)
 - [Visual Studio 2022](https://visualstudio.microsoft.com/) with Blazor Server support
 
+
 ### Setup Instructions
 
 1. **Clone or extract the repository**:
     ```bash
-git clone https://github.com/olekacak/CustomerPortal.git
-cd CustomerPortal
+    git clone https://github.com/olekacak/CustomerPortal.git
+    cd CustomerPortal
     ```
 
 2. **Import the SQL schema**:
@@ -68,6 +70,7 @@ cd CustomerPortal
 - GET /api/customer/getCustomer — List or search customers
 - POST /api/customer/deleteAccount — Soft-delete customer
 - GET /api/customer/getCustomerData — Dashboard metrics
+
 
 ## License
 
